@@ -40,15 +40,22 @@ def main():
     
     file_obj = files_to_be_send[i]
     last_offset = file_obj.tell()
-    message = file_obj.read(MAX_PACKET_DATA_SIZE)
+    message = bytearray(file_obj.read(MAX_PACKET_DATA_SIZE))
+
+    # add dummy message sequence
+    message = bytearray(file_sequence_tracker[i].to_bytes(1, 'little')) + message
+
+    # add dummy message id
+    message = bytearray(b'\x01') + message
+
+    # add dummy message type
+    message = (bytearray(b'\x02') if (file_sequence_tracker[i] == files_max_sequence[i]) else bytearray(b'\x00')) + message
 
     try:
-      print('tell', last_offset)
-      print('message size:', len(message))
-      client_sock.sendto(message, (UDP_IP_ADDRESS, UDP_PORT_NO))
+      client_sock.sendto(bytes(message), (UDP_IP_ADDRESS, UDP_PORT_NO))
       client_sock.settimeout(1)
 
-      data, attr = client_sock.recvfrom(7) # ack worth 7 bytes
+      data, addr = client_sock.recvfrom(7) # ack worth 7 bytes
 
       print("received ack:", data)
 
