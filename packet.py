@@ -3,25 +3,26 @@ import test
 import struct
 
 class Packet:
-    DATA = 0
-	  ACK = 1
-	  FIN = 2
-	  FIN_ACK = 3
-    MAX_PACKET_DATA_SIZE = 65500
-	
-	  # CTOR
-	  #data input
-	  #TIPE 	(int)	{0, 1, 2, 3}
-	  #ID 	(int)	{0, 1, 2,..., 14, 15}
-	  #SEQ 	(int)	{0, 1, 2,..., 65534, 65535}
-	  #DATA 	(byte array) {...}
+	DATA = 0
+	ACK = 1
+	FIN = 2
+	FIN_ACK = 3
+	MAX_PACKET_DATA_SIZE = 65500
 
-	def __init__(self, TYPE, ID, SEQ, DATA):
+	# CTOR
+	#data input
+	#TIPE 	(int)	{0, 1, 2, 3}
+	#ID 	(int)	{0, 1, 2,..., 14, 15}
+	#SEQ 	(int)	{0, 1, 2,..., 65534, 65535}
+	#DATA 	(byte array) {...}
+
+	def __init__(self, TYPE, ID, SEQ, DATA, CHECKSUM=0):
 		self.TYPE = TYPE
 		self.ID = ID
 		self.SEQ = SEQ
 		self.LENGTH = len(DATA)
 		self.DATA = DATA
+		self.CHECKSUM = CHECKSUM
 
 	def get_Packet(self):
 		type_id = self.concat_type_ID(self.TYPE, self.ID)
@@ -32,7 +33,7 @@ class Packet:
 		#hasil concatenate
 		result = type_id + seq + length + data
 		# checksum
-		hasil_checksum = self.checksum()
+		hasil_checksum = self.compute_checksum()
 		return result[:5] + hasil_checksum + result[5:]
 
 	#gabung type dan id, output: 1 byte
@@ -53,8 +54,8 @@ class Packet:
 		temp = struct.unpack("<H", param)
 		return temp[0]
 
-	#XOR
-	def checksum(self):
+	# Compute checksum
+	def compute_checksum(self):
 		type_id = self.concat_type_ID(self.TYPE, self.ID)
 		seq = self.encode_16_bits(self.SEQ)
 		length = self.encode_16_bits(self.LENGTH)
@@ -82,9 +83,10 @@ class Packet:
 		temp_ID = Packet.get_ID(temp_type_id)
 		temp_SEQ = bytes_input[1]
 		temp_LENGTH = bytes_input[3:5]
+		temp_CHECKSUM = bytes_input[5:7]
 		temp_DATA = bytes_input[7: len(bytes_input)]
 
-		return Packet(temp_TYPE, temp_ID, temp_SEQ, temp_DATA)
+		return Packet(temp_TYPE, temp_ID, temp_SEQ, temp_DATA, temp_CHECKSUM)
 	#keluarin integer ID dari input integer konkatenasi type + id
 	#DONE
 	def get_ID(int_concat):
