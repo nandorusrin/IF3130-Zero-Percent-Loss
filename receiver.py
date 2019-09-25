@@ -6,7 +6,7 @@ import sys
 import argparse
 import random
 import errno
-import packet
+from packet import Packet 
 
 class PACKET_TYPE:
   DATA = 0
@@ -20,10 +20,11 @@ class ReceivingFile:
     self.id = file_id
     self.sequence = -1
     self.active = True
-    self.fd = open(folder + '/' + self.id, 'ab')
+    self.fd = open(folder + '/' + str(self.id), 'ab')
   
-  def update_sequence(self, new_seq):
-    self.sequence = new_seq
+  def update_sequence(self):
+    print('hey')
+    self.sequence += 1
   
   def is_active(self):
     return self.active
@@ -36,7 +37,8 @@ class ReceivingFile:
     self.fd.close()
 
 class Client:
-  client_list = []
+  client_list = []  # client obj
+  client_port_list = [] # client port (int)
 
   def __init__(self, port): # port: int
     self.port = str(port)
@@ -45,7 +47,8 @@ class Client:
     if not os.path.exists(self.folder):
       os.makedirs(self.folder)
 
-    Client.client_list.append(self.port)
+    Client.client_port_list.append(port)
+    Client.client_list.append(self)
   
   def __eq__(self, other):
     if isinstance(other, Client):
@@ -64,19 +67,17 @@ class Client:
   
   @staticmethod
   def is_connected_client(port):  # port: int
-    return (port in Client.client_list)
+    return (port in Client.client_port_list)
   
   @staticmethod
   def get_client(port): # port: int
     for client_iter in Client.client_list:
-      if (client_iter.port == str(port)):
+      if (int(client_iter.port) == port):
         return client_iter
     assert(False)
 
 UDP_IP_ADDRESS = "localhost"
 UDP_PORT_NO = 6789
-
-connected_client = []
 
 def main():
   print('Receiver started')
@@ -84,38 +85,42 @@ def main():
   server_sock.bind((UDP_IP_ADDRESS, UDP_PORT_NO))
 
   while (True):
-    data, addr = server_sock.recvfrom(65507)
-
-    # send ack
-    # time.sleep(2) # simulate packet loss
-    server_sock.sendto("ack".encode(), addr)
+    data, addr = server_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
     sender_port = addr[1]
 
-    print("Message size received: ", len(data))
+    recv_pkt = Packet.bytesToPacket(data)
+    if (recv_pkt.CHECKSUM != recv_pkt.compute_checksum()):
+      continue
     
     # dummy
     # message type
-    msg_type = int.from_bytes(data[:1], byteorder='little', signed=False)
-    print('message type:', msg_type)
+    msg_type = recv_pkt.TYPE
 
     # message id
-    msg_id = str(int.from_bytes(data[1:2], byteorder='little', signed=False))
-    print('message id:', msg_id)
+    msg_id = recv_pkt.ID
 
     # message sequence
-    msg_seq = int.from_bytes(data[2:3], byteorder='little', signed=False)
-    print('message sequence:', msg_seq)
+    msg_seq = recv_pkt.SEQ
+    print('msg type, id, seq:', msg_type, msg_id, msg_seq)
+    
+    # send ack
+    time.sleep(1.1) # simulate packet loss
+    ack_packet = None
+    if (msg_type == Packet.DATA):
+      ack_packet = Packet(Packet.ACK, msg_id, msg_seq)
+    elif (msg_type == Packet.FIN):
+      ack_packet = Packet(Packet.FIN_ACK, msg_id, msg_seq)
+    server_sock.sendto(ack_packet.get_Packet(), addr)
 
-    msg_data = bytearray(data)[3:]
-
+    msg_data = recv_pkt.DATA
 
     client = {}
-
     if (not Client.is_connected_client(sender_port)): # new client
+      print('new client')
       client = Client(sender_port)  # create new client
-      connected_client.append(client)
     else:
+      print('old client')
       client = Client.get_client(sender_port)
     
     file_idx = client.search_file(msg_id)
@@ -123,16 +128,24 @@ def main():
       file_idx = client.add_new_file(msg_id)
     file_obj = client.files[file_idx]
 
-    if (msg_type == PACKET_TYPE.DATA):
-      if (file_obj.sequence != msg_seq and file_obj.is_active()):
-        file_obj.update_sequence(msg_seq)
+    if (msg_type == Packet.DATA):
+      print(file_obj.sequence, msg_seq)
+      if ((file_obj.sequence+1) == msg_seq and file_obj.is_active()):
+        print('Data:',len(msg_data))
+        client.files[file_idx].sequence += 1
+        print(client.files[file_idx].sequence)
         file_obj.write(msg_data)
     
-    elif (msg_type == PACKET_TYPE.FIN):
-      if (file_obj.sequence != msg_seq and file_obj.is_active()):
-        file_obj.update_sequence(msg_seq)
+    elif (msg_type == Packet.FIN):
+      print('FIN lagi')
+      if ((file_obj.sequence+1) == msg_seq and file_obj.is_active()):
+        print('FIN:', len(msg_data))
+        file_obj.update_sequence()
         file_obj.write(msg_data)
         file_obj.finalize()
+    else:
+      print('halo')
+    
     
 
 if __name__ == "__main__":

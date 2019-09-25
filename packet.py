@@ -7,8 +7,8 @@ class Packet:
 	ACK = 1
 	FIN = 2
 	FIN_ACK = 3
-	MAX_PACKET_DATA_SIZE = 65500
-  MAX_PACKET_SIZE = 65507
+	MAX_PACKET_DATA_SIZE = 32768
+	MAX_PACKET_SIZE = MAX_PACKET_DATA_SIZE + 7
 
 	# CTOR
 	#data input
@@ -17,7 +17,7 @@ class Packet:
 	#SEQ 	(int)	{0, 1, 2,..., 65534, 65535}
 	#DATA 	(byte array) {...}
 
-	def __init__(self, TYPE, ID, SEQ, DATA, CHECKSUM=0):
+	def __init__(self, TYPE, ID, SEQ, DATA=b'', CHECKSUM=0):
 		self.TYPE = TYPE
 		self.ID = ID
 		self.SEQ = SEQ

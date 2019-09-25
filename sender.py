@@ -2,10 +2,8 @@ import socket
 import argparse
 import os
 import math
-from Packet import packet
+from packet import Packet
 
-MAX_PACKET_DATA_SIZE = 65500  # to be able to comply with IP size
-MAX_PACKET_SEQUENCE = 65535
 # IP size: 65535
 # IP payload: 65535 - 20 = 65515
 # UDP size: 65515
@@ -22,7 +20,7 @@ def main():
   n_file = len(files_to_be_send)
   file_send_bool = [False for i in range(n_file)]
   file_sequence_tracker = [0 for i in range(n_file)]
-  files_max_sequence = [(math.ceil(size / MAX_PACKET_DATA_SIZE)-1) for size in files_to_be_send_size] # 0..n
+  files_max_sequence = [(math.ceil(size / Packet.MAX_PACKET_DATA_SIZE)-1) for size in files_to_be_send_size] # 0..n
 
   client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   total = 0
@@ -32,36 +30,37 @@ def main():
     if all(file_send_bool):
       break
     
-    print('i:', i)
     if (file_send_bool[i]):
       i += 1
       if (i >= n_file):
         i = 0
       continue;
+    print('i:', i)
     
     file_obj = files_to_be_send[i]
     last_offset = file_obj.tell()
-    pkt_data = bytearray(file_obj.read(MAX_PACKET_DATA_SIZE))
+    pkt_dat = bytearray(file_obj.read(Packet.MAX_PACKET_DATA_SIZE))
 
     pkt_id = i
     pkt_type = (Packet.FIN if (file_sequence_tracker[i] == files_max_sequence[i]) else Packet.DATA)
     pkt_seq = file_sequence_tracker[i]
-    pkt = packet.Packet(pkt_type, pkt_id, pkt_seq, pkt_dat)
+    pkt = Packet(pkt_type, pkt_id, pkt_seq, pkt_dat)
 
+    recv_pkt = None
     try:
-      client_sock.sendto(bytes(pkt.get_Packet), (UDP_IP_ADDRESS, UDP_PORT_NO))
+      client_sock.sendto(bytes(pkt.get_Packet()), (UDP_IP_ADDRESS, UDP_PORT_NO))
       client_sock.settimeout(1)
 
       data, addr = client_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
       recv_pkt = Packet.bytesToPacket(data)
-      if not (recv_pkt.CHECKSUM == recv_pkt.compute_checksum)
+      if not (recv_pkt.CHECKSUM == recv_pkt.compute_checksum()):
         file_obj.seek(last_offset)
         i += 1
         if (i >= n_file):
           i = 0
-        continue;
-
+        continue
+      
     except socket.timeout:
       print("Timeout reached")
       file_obj.seek(last_offset)
@@ -70,12 +69,20 @@ def main():
         i = 0
       continue;
 
-    total += len(message)
+    total += len(pkt.DATA)
 
-    file_sequence_tracker[i] += 1
+    recv_file_id = recv_pkt.ID
+    if (recv_pkt.SEQ != file_sequence_tracker[recv_file_id]):
+      file_obj.seek(last_offset)
+      i += 1
+      if (i >= n_file):
+        i = 0
+      continue
+
+    file_sequence_tracker[recv_file_id] += 1
     print('file_sequence_tracker', file_sequence_tracker)
-    if (file_sequence_tracker[i] > files_max_sequence[i]):
-      file_send_bool[i] = True
+    if (file_sequence_tracker[recv_file_id] > files_max_sequence[recv_file_id]):
+      file_send_bool[recv_file_id] = True
     
     i += 1
     if (i >= n_file):
