@@ -3,13 +3,18 @@ import test
 import struct
 
 class Packet:
+    DATA = 0
+	  ACK = 1
+	  FIN = 2
+	  FIN_ACK = 3
+    MAX_PACKET_DATA_SIZE = 65500
 	
-	#CTOR
-	#data input
-	#TIPE 	(int)	{0, 1, 2, 3}
-	#ID 	(int)	{0, 1, 2,..., 14, 15}
-	#SEQ 	(int)	{0, 1, 2,..., 65534, 65535}
-	#DATA 	(byte array) {...}
+	  # CTOR
+	  #data input
+	  #TIPE 	(int)	{0, 1, 2, 3}
+	  #ID 	(int)	{0, 1, 2,..., 14, 15}
+	  #SEQ 	(int)	{0, 1, 2,..., 65534, 65535}
+	  #DATA 	(byte array) {...}
 
 	def __init__(self, TYPE, ID, SEQ, DATA):
 		self.TYPE = TYPE
