@@ -2,6 +2,7 @@ import socket
 import argparse
 import os
 import math
+from Packet import packet
 
 MAX_PACKET_DATA_SIZE = 65500  # to be able to comply with IP size
 MAX_PACKET_SEQUENCE = 65535
@@ -40,24 +41,26 @@ def main():
     
     file_obj = files_to_be_send[i]
     last_offset = file_obj.tell()
-    message = bytearray(file_obj.read(MAX_PACKET_DATA_SIZE))
+    pkt_data = bytearray(file_obj.read(MAX_PACKET_DATA_SIZE))
 
-    # add dummy message sequence
-    message = bytearray(file_sequence_tracker[i].to_bytes(1, 'little')) + message
-
-    # add dummy message id
-    message = bytearray(b'\x01') + message
-
-    # add dummy message type
-    message = (bytearray(b'\x02') if (file_sequence_tracker[i] == files_max_sequence[i]) else bytearray(b'\x00')) + message
+    pkt_id = i
+    pkt_type = (Packet.FIN if (file_sequence_tracker[i] == files_max_sequence[i]) else Packet.DATA)
+    pkt_seq = file_sequence_tracker[i]
+    pkt = packet.Packet(pkt_type, pkt_id, pkt_seq, pkt_dat)
 
     try:
-      client_sock.sendto(bytes(message), (UDP_IP_ADDRESS, UDP_PORT_NO))
+      client_sock.sendto(bytes(pkt.get_Packet), (UDP_IP_ADDRESS, UDP_PORT_NO))
       client_sock.settimeout(1)
 
-      data, addr = client_sock.recvfrom(7) # ack worth 7 bytes
+      data, addr = client_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
-      print("received ack:", data)
+      recv_pkt = Packet.bytesToPacket(data)
+      if not (recv_pkt.CHECKSUM == recv_pkt.compute_checksum)
+        file_obj.seek(last_offset)
+        i += 1
+        if (i >= n_file):
+          i = 0
+        continue;
 
     except socket.timeout:
       print("Timeout reached")

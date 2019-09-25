@@ -6,10 +6,13 @@ import sys
 import argparse
 import random
 import errno
+import packet
 
 class PACKET_TYPE:
   DATA = 0
+  ACK = 1
   FIN = 2
+  FIN_ACK = 3
 
 receiver_folder = ''
 class ReceivingFile:

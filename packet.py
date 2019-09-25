@@ -8,6 +8,7 @@ class Packet:
 	FIN = 2
 	FIN_ACK = 3
 	MAX_PACKET_DATA_SIZE = 65500
+  MAX_PACKET_SIZE = 65507
 
 	# CTOR
 	#data input
