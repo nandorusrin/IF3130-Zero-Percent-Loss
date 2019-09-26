@@ -71,7 +71,7 @@ def main():
       data, addr = client_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
       recv_pkt = Packet.bytesToPacket(data)
-      if (recv_pkt.CHECKSUM != recv_pkt.compute_checksum() or pkt_type != recv_pkt.TYPE):
+      if not (recv_pkt.CHECKSUM == recv_pkt.compute_checksum()):
         file_obj.seek(last_offset)
         i += 1
         if (i >= n_file):
