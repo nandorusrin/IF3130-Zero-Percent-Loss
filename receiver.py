@@ -23,7 +23,7 @@ class ReceivingFile:
     self.fd = open(folder + '/' + str(self.id), 'ab')
   
   def update_sequence(self):
-    print('hey')
+    
     self.sequence += 1
   
   def is_active(self):
@@ -105,7 +105,7 @@ def main():
     print('msg type, id, seq:', msg_type, msg_id, msg_seq)
     
     # send ack
-    time.sleep(1.1) # simulate packet loss
+    #time.sleep(1.1) # simulate packet loss
     ack_packet = None
     if (msg_type == Packet.DATA):
       ack_packet = Packet(Packet.ACK, msg_id, msg_seq)
@@ -114,7 +114,6 @@ def main():
     server_sock.sendto(ack_packet.get_Packet(), addr)
 
     msg_data = recv_pkt.DATA
-
     client = {}
     if (not Client.is_connected_client(sender_port)): # new client
       print('new client')

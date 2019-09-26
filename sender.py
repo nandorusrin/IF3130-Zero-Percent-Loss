@@ -16,6 +16,23 @@ UDP_PORT_NO = 6789
 files_to_be_send = []
 files_to_be_send_size = []
 
+def printProgressBar (file_names, iteration, total, decimals = 1, length = 50, fill = '█'):
+    progress_str = ""
+    all_hundred = True
+    for i in range(0, len(file_names), 1):
+      percent = ("{0:." + str(decimals) + "f}").format(100 * ((iteration[i]-1) / float(total[i])))
+      #filledLength = int(length * (iteration[i]-1) // total[i])
+      #bar = fill * filledLength + '-' * (length - filledLength)
+      
+      #progress_str += ('\r {} \t |{}| {}%% \r'.format(file_names[i].name, bar, percent))
+      progress_str += ('{} \t {}%, '.format(file_names[i].name, percent))
+    
+    
+    progress_str = '\r' + progress_str + '\r'
+
+    # Print New Line on Complete
+    print(progress_str, end='\r')
+
 def main():
   n_file = len(files_to_be_send)
   file_send_bool = [False for i in range(n_file)]
@@ -35,7 +52,7 @@ def main():
       if (i >= n_file):
         i = 0
       continue;
-    print('i:', i)
+    #print('i:', i)
     
     file_obj = files_to_be_send[i]
     last_offset = file_obj.tell()
@@ -49,7 +66,7 @@ def main():
     recv_pkt = None
     try:
       client_sock.sendto(bytes(pkt.get_Packet()), (UDP_IP_ADDRESS, UDP_PORT_NO))
-      client_sock.settimeout(1)
+      client_sock.settimeout(5)
 
       data, addr = client_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
@@ -62,7 +79,7 @@ def main():
         continue
       
     except socket.timeout:
-      print("Timeout reached")
+      #print("Timeout reached")
       file_obj.seek(last_offset)
       i += 1
       if (i >= n_file):
@@ -80,7 +97,10 @@ def main():
       continue
 
     file_sequence_tracker[recv_file_id] += 1
-    print('file_sequence_tracker', file_sequence_tracker)
+    #print('file_sequence_tracker', file_sequence_tracker)
+    printProgressBar(files_to_be_send, file_sequence_tracker, files_max_sequence)
+    # printProgressBar(files_to_be_send[i].name, file_sequence_tracker[recv_file_id]-1, files_max_sequence[recv_file_id])
+    
     if (file_sequence_tracker[recv_file_id] > files_max_sequence[recv_file_id]):
       file_send_bool[recv_file_id] = True
     
@@ -88,7 +108,7 @@ def main():
     if (i >= n_file):
       i = 0
 
-  print('total', total, files_to_be_send_size)
+  print('\ntotal', total, files_to_be_send_size)
   client_sock.close()
 
 if __name__ == "__main__":

@@ -1,0 +1,77 @@
+git init <directory_name>
+\ memulai repository lokal
+
+git clone
+|- membuat repositori baru dari repo yang sudah ada
+|- bisa nge-clone dari server (remote), bisa juga duplikat
+\_ biasanya diikuti oleh <protokol>://<server address>/<username>/<nama repo>.git
+
+git add
+|- mendaftarkan file yg akan di commit
+|- jika mau nge-stage semua file, tambahkan " ." di blkg
+\_ jika tidak, tulis masing2 nama file dipisahkan spasi
+
+git commit
+|- mendaftarkan file baru yang sudah di-stage ke repo lokal
+\_ biasanya wajib disertakan komentar
+
+git status
+\_ memperlihatkan status2 daftar file yang belum di-commit, spt stage, modified, new, untracked, conflict, dll
+
+git push <remote_repo_name> <branch_name>
+|- meng-upload hasil semua yang sudah di-commit di lokal repo, ke remote repo
+\_ by default remote repo = ORIGIN
+
+git fetch
+|- men-download semua object dari remote repo
+\_ masuk ke direktori /remote, sehingga tidak conflict dengan file lokal
+
+git pull
+|- menarik semua file yg terupdate dari remote ke local repo
+|- basically == git fetch + merge FETCH_HEAD
+\_ setelah dipull dan masuk ke sebuah branch FETCH_HEAD, FETCH_HEAD akan merge dengan CURRENT BRANCH
+
+git checkout
+|- mengembalikan posisi terakhir HEAD branch (pointer menuju arah COMMIT terakhir)
+|- jika current file tidak disimpan atau commit, terjadi atau "un-staged"
+|- file dpt disimpan smntr dengan
+   :: git stash
+\_ diikuti parameter branch mana yang akan diarahkan
+   :: git checkout <branch_name>
+
+git stash
+|- menyimpan hasil kerja sementara
+|- biasanya yg belum di-stage dan commit karena belum selesai
+|- penyimpanannya seperti save data
+|- untuk melihat daftar yang sudah di-stash:
+   :: git stash list
+|- HATI2 saat nge-load, pastikan sudah berada di BRANCH yg benar, sesuai, dan diharapkan
+|- untuk nge-load stash:
+   :: git stash pop (the most recent stash)
+   :: git stash apply (the most recent stash)
+   :: git stash apply stash@{n} (0 is the most recent)
+|- untuk nge-delete stash:
+   :: git stash drop stash@{n}
+\_ UNDO applying stash:
+   :: git stash show -p stash@{n} | git apply -R
+
+git log --graph
+\_ menampilkan history git beserta graf sederhana di CONSOLE
+
+gitk
+\_ GUI untuk menampilkan history GIT
+
+git merge <other_branch_name>
+|- menggabungkan branch lain dgn CURRENT_branch
+\_ biasanya sering terjadi merge conflict
+
+git diff
+\_ melihat isi file yang conflict dan perbedaannya
+
+
+
+RESOURCE:
+1. Git - Basic Branching and Merging, https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging
+2. Git - Stashing, https://git-scm.com/book/en/v1/Git-Tools-Stashing
+3. Git - git-fetch Documentation, https://git-scm.com/docs/git-fetch
+4. What is the difference between "Git push" and "Git push origin branch-name" in an existing branch?, https://www.quora.com/What-is-the-difference-between-Git-push-and-Git-push-origin-branch-name-in-an-existing-branch

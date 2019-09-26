@@ -71,7 +71,6 @@ class Packet:
 		xor_result = bytearray(2)
 		xor_result[0] = result[0]
 		xor_result[1] = result[1]
-
 		for i in range(2, len(result), 2):
 			xor_result[0] ^= result[i]
 			xor_result[1] ^= result[i+1]
@@ -82,7 +81,7 @@ class Packet:
 		temp_type_id = bytearray(bytes_input)[0]
 		temp_TYPE = Packet.get_type(temp_type_id)
 		temp_ID = Packet.get_ID(temp_type_id)
-		temp_SEQ = bytes_input[1]
+		temp_SEQ = struct.unpack("<H", bytes_input[1:3])[0]
 		temp_LENGTH = bytes_input[3:5]
 		temp_CHECKSUM = bytes_input[5:7]
 		temp_DATA = bytes_input[7: len(bytes_input)]
@@ -121,23 +120,26 @@ class Packet:
 
 # di bawah ini contoh sm testingnya
 
+'''
+f_img = open("GIT.txt", "rb")
+num = f_img.read()
+f_img.close()
+P1 = Packet(0, 0, 256, (num))
+temp = P1.compute_checksum()
+print(type(temp))
+print(len(temp))
+print(len(P1.get_Packet()))
+print(type(P1.get_Packet()))
+P_temp = P1.get_Packet()
+print("\n\n")
+P2 = Packet.bytesToPacket(P_temp)
+print(P1.TYPE, " ", P2.TYPE)
+print(P1.ID, " ", P2.ID)
+print(P1.SEQ, " ", P2.SEQ)
+print(P1.LENGTH, " ", P2.LENGTH)
+print(P1.compute_checksum())
+print(Packet.bytesToPacket(bytes(P_temp)).compute_checksum())
 
-# f_img = open("GIT.txt", "rb")
-# num = f_img.read()
-# f_img.close()
-
-# P1 = Packet(1, 3, 3, (num))
-# temp = P1.checksum()
-# print(type(temp))
-# print(len(temp))
-# print(len(P1.get_Packet()))
-# print(type(P1.get_Packet()))
-# P_temp = P1.get_Packet()
-# print("\n\n")
-# P2 = Packet.bytesToPacket(P_temp)
-# print(P1.TYPE, " ", P2.TYPE)
-# print(P1.ID, " ", P2.ID)
-# print(P1.SEQ, " ", P2.SEQ)
-# print(P1.LENGTH, " ", P2.LENGTH)
-# if (P1.DATA == P2.DATA and P1.checksum() == P2.checksum()):
-# 	print("P1 dan P2 identik")
+if (P1.DATA == P2.DATA and P1.compute_checksum() == P2.compute_checksum()):
+	print("P1 dan P2 identik")
+	'''
