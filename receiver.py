@@ -37,13 +37,15 @@ class ReceivingFile:
     self.fd.close()
 
 class Client:
-  client_list = []  # client obj
-  client_port_list = [] # client port (int)
+  # Static attributes
+  client_list = []  # Client obj
+  client_port_list = [] # Client port (int)
 
-  def __init__(self, port): # port: int
+  def __init__(self, port: int):
     self.port = str(port)
     self.files = []
     self.folder = receiver_folder + '/' + self.port
+    print('New client connected using port:', self.port)
     if not os.path.exists(self.folder):
       os.makedirs(self.folder)
 
@@ -70,7 +72,7 @@ class Client:
     return (port in Client.client_port_list)
   
   @staticmethod
-  def get_client(port): # port: int
+  def get_client(port: int): # port: int
     for client_iter in Client.client_list:
       if (int(client_iter.port) == port):
         return client_iter
@@ -80,32 +82,35 @@ UDP_IP_ADDRESS = "localhost"
 UDP_PORT_NO = 6789
 
 def main():
-  print('Receiver started')
   server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   server_sock.bind((UDP_IP_ADDRESS, UDP_PORT_NO))
+  print('Receiver started on ', UDP_IP_ADDRESS, ':', UDP_PORT_NO, sep="")
+  print('Your file(s) will be saved in', (receiver_folder + '/'), end="\n\n")
 
   while (True):
     data, addr = server_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
     sender_port = addr[1]
 
-    recv_pkt = Packet.bytesToPacket(data)
-    if (recv_pkt.CHECKSUM != recv_pkt.compute_checksum()):
+    recv_pkt = None
+    try:
+      recv_pkt = Packet.bytesToPacket(data)
+    except:
+      continue
+
+    if (recv_pkt.CHECKSUM != recv_pkt.compute_checksum()):  # invalid data
       continue
     
-    # dummy
-    # message type
+    # Message type
     msg_type = recv_pkt.TYPE
 
-    # message id
+    # Message id
     msg_id = recv_pkt.ID
 
-    # message sequence
+    # Message sequence
     msg_seq = recv_pkt.SEQ
-    print('msg type, id, seq:', msg_type, msg_id, msg_seq)
     
-    # send ack
-    #time.sleep(1.1) # simulate packet loss
+    # Send ACK-like packet
     ack_packet = None
     if (msg_type == Packet.DATA):
       ack_packet = Packet(Packet.ACK, msg_id, msg_seq)
@@ -116,40 +121,32 @@ def main():
     msg_data = recv_pkt.DATA
     client = {}
     if (not Client.is_connected_client(sender_port)): # new client
-      print('new client')
-      client = Client(sender_port)  # create new client
+      client = Client(sender_port) 
     else:
-      print('old client')
       client = Client.get_client(sender_port)
     
     file_idx = client.search_file(msg_id)
     if (file_idx == -1):
+      print("Receiving new file with\nPacket ID:", msg_id, "\nPort:", client.port, end="\n\n")
       file_idx = client.add_new_file(msg_id)
     file_obj = client.files[file_idx]
 
     if (msg_type == Packet.DATA):
-      print(file_obj.sequence, msg_seq)
       if ((file_obj.sequence+1) == msg_seq and file_obj.is_active()):
-        print('Data:',len(msg_data))
-        client.files[file_idx].sequence += 1
-        print(client.files[file_idx].sequence)
+        file_obj.sequence += 1
         file_obj.write(msg_data)
     
     elif (msg_type == Packet.FIN):
-      print('FIN lagi')
       if ((file_obj.sequence+1) == msg_seq and file_obj.is_active()):
-        print('FIN:', len(msg_data))
         file_obj.update_sequence()
         file_obj.write(msg_data)
         file_obj.finalize()
-    else:
-      print('halo')
-    
+        print("File with\nPacket ID:", msg_id, "\nPort:", client.port, "\nSuccessfully received!", end="\n\n")
     
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Receive File(s) through UDP that simulates TCP')
-  parser.add_argument('Hostname', metavar='host', type=str, help='UDP Hostname')
+  parser.add_argument('Hostname', metavar='host', type=str, help='Hostname')
   parser.add_argument('Port', metavar='port', type=int, help='UDP port')
   parser.add_argument('Folder', metavar='folder', type=str, help='Received Folder', default='receiver')
   
@@ -166,7 +163,10 @@ if __name__ == "__main__":
 
   try:
     main()
+  except KeyboardInterrupt:
+    pass
   finally:
-    for client in connected_client:
+    for client in Client.client_list:
       for file_recv_obj in client.files:
         file_recv_obj.finalize()
+    print("\rReceiver is exiting..")

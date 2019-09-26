@@ -16,26 +16,19 @@ UDP_PORT_NO = 6789
 files_to_be_send = []
 files_to_be_send_size = []
 
-def printProgressBar (file_names, iteration, total, decimals = 1, length = 50, fill = '█'):
-    progress_str = ""
-    all_hundred = True
-    for i in range(0, len(file_names), 1):
-      percent = ("{0:." + str(decimals) + "f}").format(100 * ((iteration[i]-1) / float(total[i])))
-      #filledLength = int(length * (iteration[i]-1) // total[i])
-      #bar = fill * filledLength + '-' * (length - filledLength)
-      
-      #progress_str += ('\r {} \t |{}| {}%% \r'.format(file_names[i].name, bar, percent))
-      progress_str += ('{} \t {}%, '.format(file_names[i].name, percent))
-    
-    
-    progress_str = '\r' + progress_str + '\r'
+def printProgressBar(file_names, iteration, total):
+  progress_str = ""
+  for i in range(0, len(file_names), 1):
+    percent = ("{0:.1f}").format(100 * ((iteration[i]) / float(total[i]+1)))
+    progress_str += ('[{}: {}%], '.format(file_names[i].name, percent))
+  
+  progress_str = '\r' + progress_str + '\r'
 
-    # Print New Line on Complete
-    print(progress_str, end='\r')
+  print(progress_str, end='\r')
 
 def main():
   n_file = len(files_to_be_send)
-  file_send_bool = [False for i in range(n_file)]
+  file_sent_bool = [False for i in range(n_file)]
   file_sequence_tracker = [0 for i in range(n_file)]
   files_max_sequence = [(math.ceil(size / Packet.MAX_PACKET_DATA_SIZE)-1) for size in files_to_be_send_size] # 0..n
 
@@ -44,15 +37,14 @@ def main():
 
   i = 0
   while (True):
-    if all(file_send_bool):
+    if all(file_sent_bool):
       break
     
-    if (file_send_bool[i]):
+    if (file_sent_bool[i]):
       i += 1
       if (i >= n_file):
         i = 0
       continue;
-    #print('i:', i)
     
     file_obj = files_to_be_send[i]
     last_offset = file_obj.tell()
@@ -66,7 +58,7 @@ def main():
     recv_pkt = None
     try:
       client_sock.sendto(bytes(pkt.get_Packet()), (UDP_IP_ADDRESS, UDP_PORT_NO))
-      client_sock.settimeout(5)
+      client_sock.settimeout(5) # set timeout for 5 second
 
       data, addr = client_sock.recvfrom(Packet.MAX_PACKET_SIZE)
 
@@ -79,7 +71,6 @@ def main():
         continue
       
     except socket.timeout:
-      #print("Timeout reached")
       file_obj.seek(last_offset)
       i += 1
       if (i >= n_file):
@@ -97,23 +88,21 @@ def main():
       continue
 
     file_sequence_tracker[recv_file_id] += 1
-    #print('file_sequence_tracker', file_sequence_tracker)
     printProgressBar(files_to_be_send, file_sequence_tracker, files_max_sequence)
-    # printProgressBar(files_to_be_send[i].name, file_sequence_tracker[recv_file_id]-1, files_max_sequence[recv_file_id])
     
     if (file_sequence_tracker[recv_file_id] > files_max_sequence[recv_file_id]):
-      file_send_bool[recv_file_id] = True
+      file_sent_bool[recv_file_id] = True
     
     i += 1
     if (i >= n_file):
       i = 0
 
-  print('\ntotal', total, files_to_be_send_size)
+  print(len(files_to_be_send), 'File(s) sent:', [file.name for file in files_to_be_send])
   client_sock.close()
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Send File(s) through UDP that simulates TCP')
-  parser.add_argument('Hostname', metavar='host', type=str, help='UDP Hostname')
+  parser.add_argument('Hostname', metavar='host', type=str, help='Hostname')
   parser.add_argument('Port', metavar='port', type=int, help='UDP port')
   parser.add_argument('File', metavar='file(s)', type=str, nargs='+', help='Files to be send')
   
